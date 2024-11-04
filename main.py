@@ -1,6 +1,7 @@
 import curses
 import math
 import time
+import sympy as sp
 
 # Define the ASCII brightness dictionary
 ascii_brightness = {
@@ -28,7 +29,7 @@ ascii_brightness = {
 }
 
 def f(x):
-    return (math.sin(x*0.07)**2 + math.cos(x*0.1)+1)*0.5
+    return (sp.sin(x)**2 * sp.cos(x)+1)*1
 
 def slope(x):
     delta_x = 0.01
@@ -43,13 +44,37 @@ def wave_animation(stdscr):
 
     height, width = stdscr.getmaxyx()  # Get the terminal size
 
+    print(height, width)
+
+    x = sp.symbols('x')
+    n = sp.symbols('n')
+
+    df = sp.diff(f(x),x)
+
+    zeros = sp.solve(df,x)
+
+    if f(zeros[0]) > f(zeros[1]):
+        gap = f(zeros[0]) - f(zeros[1])
+        factor = sp.solve(sp.Eq(f(zeros[0])*n, gap))
+        constant = sp.solve(sp.Eq(f(zeros[0])+n, height-1))
+    else:
+        gap = f(zeros[1]) - f(zeros[0])
+        factor = sp.solve(sp.Eq(f(zeros[1])*n, gap))
+        constant = sp.solve(sp.Eq(f(zeros[1])+n, height-1))
+
+    print("Df: ", df)
+    print("Zeros: ", zeros)
+    print("Gap: ", gap)
+    print("Factor: ", factor)
+    print("Constant: ", constant)
+
     while True:
         stdscr.clear()  # Clear the screen
-        time_offset = time.time() * 25  # Get time once per frame iteration
+        time_offset = time.time()*25  # Get time once per frame iteration
 
-        for x in range(width-2):
+        for x in range(width-1):
             # Calculate the y value using sine function
-            y = int(f(x + time_offset) * (height // 2))
+            y = int(((f(x + time_offset) + constant[0]) * factor[0]) * (height // 2))
 
             # Calculate the slope at the current x position
             slope_value = slope(x + time_offset)
@@ -57,7 +82,7 @@ def wave_animation(stdscr):
             # Get the corresponding character based on slope
             char = ascii_brightness.get(round(slope_value, 2), ' ')
 
-            if x < width and y < height:
+            if 0 < x < width and 0 < y < height:
                 stdscr.addstr(y, x, char) # Draw the character at the calculated position
 
         stdscr.refresh()  # Refresh the screen
