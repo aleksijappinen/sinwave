@@ -70,7 +70,7 @@ def wave_animation(stdscr):
     else:
         gap = f(x2) - f(x1)
         factor = sp.solve(sp.Eq(h(x2,n), ((height-1)/2)))
-        constant = sp.solve(sp.Eq(g(x1,factor[0],-n), -1))
+        constant = sp.solve(sp.Eq(g(x2,factor[0],-n), -1))
 
     factor = float(factor[0])
     constant = float(constant[0])
@@ -83,7 +83,7 @@ def wave_animation(stdscr):
 
     while True:
         stdscr.clear()  # Clear the screen
-        time_offset = time.time()*5  # Get time once per frame iteration
+        time_offset = time.time()*25  # Get time once per frame iteration
 
         for x in range(width-1):
             # Calculate the y value using sine function
@@ -99,6 +99,8 @@ def wave_animation(stdscr):
                 stdscr.addstr(y, x, '*') # Draw the character at the calculated position
 
         stdscr.refresh()  # Refresh the screen
+        time.sleep(0.005)
+        
         if stdscr.getch() != -1:  # Exit on any key press
             break
 
