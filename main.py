@@ -1,5 +1,4 @@
 import curses
-import math
 import time
 import sympy as sp
 
@@ -29,7 +28,13 @@ ascii_brightness = {
 }
 
 def f(x):
-    return (sp.sin(x)**2 * sp.cos(x)+1)*1
+    return sp.sin(x)
+
+def g(x,factor,const):
+    return (f(x)+const)*factor
+
+def h(x,factor):
+    return f(x)*factor
 
 def slope(x):
     delta_x = 0.01
@@ -44,6 +49,8 @@ def wave_animation(stdscr):
 
     height, width = stdscr.getmaxyx()  # Get the terminal size
 
+    scale = (2 * sp.pi) / width
+
     print(height, width)
 
     x = sp.symbols('x')
@@ -53,14 +60,20 @@ def wave_animation(stdscr):
 
     zeros = sp.solve(df,x)
 
-    if f(zeros[0]) > f(zeros[1]):
-        gap = f(zeros[0]) - f(zeros[1])
-        factor = sp.solve(sp.Eq(f(zeros[0])*n, gap))
-        constant = sp.solve(sp.Eq(f(zeros[0])+n, height-1))
+    x1 = zeros[0]
+    x2 = zeros[1]
+
+    if f(x1) > f(x2):
+        gap = f(x1) - f(x2)
+        factor = sp.solve(sp.Eq(h(x2,n), ((height-1)/2)))
+        constant = sp.solve(sp.Eq(g(x2,factor[0],-n), -1))
     else:
-        gap = f(zeros[1]) - f(zeros[0])
-        factor = sp.solve(sp.Eq(f(zeros[1])*n, gap))
-        constant = sp.solve(sp.Eq(f(zeros[1])+n, height-1))
+        gap = f(x2) - f(x1)
+        factor = sp.solve(sp.Eq(h(x2,n), ((height-1)/2)))
+        constant = sp.solve(sp.Eq(g(x1,factor[0],-n), -1))
+
+    factor = float(factor[0])
+    constant = float(constant[0])
 
     print("Df: ", df)
     print("Zeros: ", zeros)
@@ -70,11 +83,11 @@ def wave_animation(stdscr):
 
     while True:
         stdscr.clear()  # Clear the screen
-        time_offset = time.time()*25  # Get time once per frame iteration
+        time_offset = time.time()*5  # Get time once per frame iteration
 
         for x in range(width-1):
             # Calculate the y value using sine function
-            y = int(((f(x + time_offset) + constant[0]) * factor[0]) * (height // 2))
+            y = int(g(x*scale + time_offset, factor, constant))
 
             # Calculate the slope at the current x position
             slope_value = slope(x + time_offset)
@@ -83,7 +96,7 @@ def wave_animation(stdscr):
             char = ascii_brightness.get(round(slope_value, 2), ' ')
 
             if 0 < x < width and 0 < y < height:
-                stdscr.addstr(y, x, char) # Draw the character at the calculated position
+                stdscr.addstr(y, x, '*') # Draw the character at the calculated position
 
         stdscr.refresh()  # Refresh the screen
         if stdscr.getch() != -1:  # Exit on any key press
