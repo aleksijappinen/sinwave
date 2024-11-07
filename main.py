@@ -29,10 +29,10 @@ ascii_brightness = {
 }
 
 def spf(x):
-    return sp.sin(x)**3
+    return sp.sin(x)**3-sp.cos(x)+sp.sin(x)**2
 
 def f(x):
-    return math.sin(x)**3
+    return math.sin(x)**3-math.cos(x)+math.sin(x)**2
 
 def g(x,factor,const):
     return (f(x)+const)*factor
@@ -46,11 +46,12 @@ def slope(x):
 def wave_animation(stdscr):
     curses.curs_set(0)  # Hide the cursor
     stdscr.nodelay(1)   # Make getch non-blocking
+    time_offset = time.time()
 
     height, width = stdscr.getmaxyx()  # Get the terminal size
 
     x = sp.symbols('x', real=True)
-    df = sp.diff(spf(x),x)
+    df = sp.diff(spf(x),x).evalf()
     zeros = sp.solve(df,x)
 
     max, min = zeros[0], zeros[0]
@@ -65,10 +66,13 @@ def wave_animation(stdscr):
     for i in range(0, len(zeros)):
         if spf(zeros[i]) < min:
             min = zeros[i]
+    
+    print("min: ", f(min),"max: ", f(min))
 
+    factor = (height-1)/abs((f(max)+1)-(f(min)+1))
     const = 1
-
-    factor = ((height-1)/2)/f(max)
+    
+    # const = (height-1)/abs(factor-f(max))
 
     # if f(min) < 0:
     #     factor = ((height-1)/2)/f(max)
@@ -77,7 +81,7 @@ def wave_animation(stdscr):
 
     scale = (2 * sp.pi) / (width/2)
 
-    print(f"{min=}, {g(max,factor,const)}")
+    print(f"{min=}, {g(min,factor,const)}")
 
     print("Df: ", df)
     print("Zeros: ", zeros)
