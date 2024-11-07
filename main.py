@@ -3,42 +3,39 @@ import time
 import math
 import sympy as sp
 
-# Define the ASCII brightness dictionary
+# ASCII brightness dictionary
 ascii_brightness = {
-    0.1: '+',
-    0.09: '%',
-    0.08: '#',
-    0.07: '@',  # Brightest
-    0.06: '&',
-    0.05: '$',
-    0.04: '*',
-    0.03: '!',
-    0.02: '=',
-    0.01: '8',
-    0.0: '*',  # Mid brightness
-    -0.01: '8',
-    -0.02: '=',
-    -0.03: '$',
-    -0.04: '&',
-    -0.05: '*',
-    -0.06: '!',
-    -0.07: '.',  # Darkest
-    -0.08: "'",
-    -0.09: '`',
-    -0.1: '_'  # Least bright
+    1: '.',  # Darkest
+    0.9: '_',
+    0.8: '`',
+    0.7: "'",  
+    0.6: '^',  # Pretty dark
+    0.5: '~', 
+    0.4: '-',
+    0.3: '*',  # Mid bright
+    0.2: '~',
+    0.1: '"',
+    0: '&',  # Pretty bright
+    -0.1: ';',
+    -0.2: '!',
+    -0.3: '@',  # Brightest
+    -0.4: '#',
+    -0.5: '%',
+    -0.6: '&',  # Pretty bright
+    -0.7: '8', 
+    -0.8: '$',
+    -0.9: '*',
+    -1: '#'  # Mid bright
 }
 
 def spf(x):
-    return sp.sin(x)**4 + sp.cos(x)**3
+    return sp.sin(x)**3
 
 def f(x):
-    return math.sin(x)**4 + math.cos(x)**3
+    return math.sin(x)**3
 
 def g(x,factor,const):
     return (f(x)+const)*factor
-
-# def h(x,factor):
-#     return f(x)*factor
 
 def slope(x):
     delta_x = 0.01
@@ -49,77 +46,82 @@ def slope(x):
 def wave_animation(stdscr):
     curses.curs_set(0)  # Hide the cursor
     stdscr.nodelay(1)   # Make getch non-blocking
-    # stdscr.timeout(5)   # Refresh every 5 milliseconds
 
     height, width = stdscr.getmaxyx()  # Get the terminal size
 
-    scale = (2 * sp.pi) / (width/2)
+    x = sp.symbols('x', real=True)
+    df = sp.diff(spf(x),x)
+    zeros = sp.solve(df,x)
+
+    max, min = zeros[0], zeros[0]
 
     print(height, width)
 
-    x = sp.symbols('x')
-    # n = sp.symbols('n')
-
-    df = sp.diff(spf(x),x)
-
-    zeros = sp.solve(df,x)
-
-
     # Get the largest zero and the smallest zero from zeros
-    max, min = zeros[0], zeros[0]
-
     for i in range(0, len(zeros)):
-        if zeros[i] > max:
+        if spf(zeros[i]) > max:
             max = zeros[i]
 
     for i in range(0, len(zeros)):
-        if zeros[i] < min:
+        if spf(zeros[i]) < min:
             min = zeros[i]
 
-    x1 = max
-    x2 = min
+    const = 1
 
-    if f(x1) > f(x2):
-        factor = ((height-1)/2)/f(x1)
-        const = (1/factor)-f(x2)
-        # factor = sp.solve(sp.Eq(h(x2,n), ((height-1)/2)))
-        # constant = sp.solve(sp.Eq(g(x2,factor[0],-n), -1))
+    factor = ((height-1)/2)/f(max)
 
-    else:
-        factor = ((height-1)/2)/f(x2)
-        const = (1/factor)-f(x1)
-        # factor = sp.solve(sp.Eq(h(x2,n), ((height-1)/2)))
-        # constant = sp.solve(sp.Eq(g(x2,factor[0],-n), -1))
+    # if f(min) < 0:
+    #     factor = ((height-1)/2)/f(max)
+    # else:
+    #     factor = (height-1)/f(max)
 
+    scale = (2 * sp.pi) / (width/2)
 
-    # factor = float(factor[0])
-    # constant = float(constant[0])
+    print(f"{min=}, {g(max,factor,const)}")
 
     print("Df: ", df)
     print("Zeros: ", zeros)
     print("Factor: ", factor)
     print("Constant: ", const)
+    print("Scale: ", scale)
+
+    slopes = list()
+
+    # Calculate max slope for normalization
+    max_slope = 0
+    for x in range(width - 1):
+        current_slope = abs(slope(x * scale))
+        if current_slope > max_slope:
+            max_slope = current_slope
 
     while True:
         stdscr.clear()  # Clear the screen
-        time_offset = time.time()*5  # Get time once per frame iteration
+        time_offset = time.time()  # Get time once per frame iteration
 
         for x in range(width-1):
             # Calculate the y value using sine function
             y = int(g(x*scale + time_offset, factor, const))
 
-            # # Calculate the slope at the current x position
-            # slope_value = slope(x + time_offset)
+            # Calculate the slope at the current x position
+            slope_value = slope(x * scale + time_offset)
+            if max_slope != 0:
+                slope_value /= max_slope  # Normalize to [-1, 1]
 
-            # # Get the corresponding character based on slope
-            # char = ascii_brightness.get(round(slope_value, 2), ' ')
+            slopes.append(slope_value)
 
-            if 0 < x < width and 0 < y < height:
-                stdscr.addstr(y, x, '*') # Draw the character at the calculated position
-
+            # Get the corresponding character based on slope
+            char = ascii_brightness.get(round(slope_value, 1), ' ')
+            
+            y_rev = height - y - 1 # Reverse y to correlate with curses reversed terminal
+            
+            if 0 < x < width and 0 < y_rev < height:
+                stdscr.addstr(y_rev, x, char) # Draw the character
+            
         stdscr.refresh()  # Refresh the screen
         
         if stdscr.getch() != -1:  # Exit on any key press
+            for number in range(0, 50, 5): 
+                print(slopes[number]) 
             break
 
 if __name__ == '__main__':
